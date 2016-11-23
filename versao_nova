@@ -151,6 +151,8 @@ IS
     vexcluidiautil NUMBER;
    totalgeral number;
    
+   vcargo2 varchar2(100);
+   
    RETORNO_VALORES varchar2(4000);
    varrayretorno apex_application_global.vc_arr2;
 
@@ -246,9 +248,9 @@ for x in(
 --htp.p('rodei o sql loopx');
 vflagpernoiteida :=x.pernoiteida;
 vflagpernoitevolta :=x.pernoitevolta;
-if x.COD_AUTORIDADE_ACOMPANHADA is not null then
-       SELECT DIARIAS_ACOMPANHA_AUTORIDADE2(x.COD_AUTORIDADE_ACOMPANHADA, x.inicio,x.fim,x.COD_TIPO_ASSESSORA,x.cod_tipo) INTO  x.valor_diaria FROM DUAL;
-end if;
+--if x.COD_AUTORIDADE_ACOMPANHADA is not null then
+      -- SELECT DIARIAS_ACOMPANHA_AUTORIDADE2(x.COD_AUTORIDADE_ACOMPANHADA, x.inicio,x.fim,x.COD_TIPO_ASSESSORA,x.cod_tipo) INTO  x.valor_diaria FROM DUAL;
+--end if;
   vsomatotalnormal := x.valor_diaria;
   vvalor := x.valor_diaria;
   data_inicio_pessoa := x.inicio;   
@@ -318,6 +320,9 @@ LOOP
    vadatanormal(l) := vdatainiefet;
    vvalorpadrao (l) := x.valor_diaria; 
    vafc(l) := x.cargo;
+   
+  -- htp.p(vadatanormal(l) || ' ' ||  vvalorpadrao (l) || ' ' || vafc(l) || '<br>');
+   
    vdatainiefet := vdatainiefet +1;
    
    
@@ -348,6 +353,7 @@ end loop;
  vdatafinal :=x.fim;
 vdiariastipo(x.cargo).vdias := to_number(x.diasdif);
 vdiariastipoesp(x.cargo).vdias := 0;
+
 --htp.p('voucheacar pernoiteida');
   if  upper(vflagpernoiteida) = 'S'   then 
       --htp.p('isi');
@@ -370,20 +376,28 @@ vdiariastipoesp(x.cargo).vdias := 0;
    
                 --vdiariastipoesp(x.cargo).vtipo:=1; -- Nacional 
     --htp.p('xcargo'||upper(x.cargo))  ; 
-  if x.COD_AUTORIDADE_ACOMPANHADA is not null then         
-     SELECT DIARIAS_ACOMPANHA_AUTORIDADE2(x.COD_AUTORIDADE_ACOMPANHADA, x.inicio,x.fim,x.COD_TIPO_ASSESSORA,1) INTO  valordiaria FROM DUAL;
-  else     
+  --if x.COD_AUTORIDADE_ACOMPANHADA is not null then      
+    -- SELECT DIARIAS_ACOMPANHA_AUTORIDADE2(x.COD_AUTORIDADE_ACOMPANHADA, x.inicio,x.fim,x.COD_TIPO_ASSESSORA,1) INTO  valordiaria FROM DUAL;
+  --else  
     select valor into valordiaria from DIARIAS_HIST_VALOR_DIARIA where codigo_cargo =(select codigo from diarias_cargo where  upper(cargo)=upper(x.cargo)   
      and codigo_tipo=1 and data_fim is null);
    --verificar data inicial e data fim do diarasesp
-end if;
+--end if;
   vdiariastipoesp(x.cargo).vfc := valordiaria;
   vdiariastipoesp(x.cargo).vtipo := 2;
    -- htp.p('asa');
                
- 
- end if;
---htp.p('inter ou nac');
+                end if;
+
+ if x.COD_AUTORIDADE_ACOMPANHADA is not null then
+DIARIAS_ACOMPANHA_AUT(vcodigo_evento,vcodigo_servidor,vcodlanc, vcargo2, vdiariastipo(vcargo2).vdias,  vdiariastipo(vcargo2).vfc, vdiariastipo(vcargo2).vdataini, vdiariastipo(vcargo2).vdatafim );
+
+ vdiariastipo(vcargo2).vdiaexclui := 0;
+
+ vdiariastipo(vcargo2).vtipo := 1;
+end if;
+
+ --htp.p('inter ou nac');
 if             x.cod_tipo = 21 then
   vdiariastipo(x.cargo).vtipo := 21; --Internacional
 else  
@@ -413,7 +427,9 @@ where dlv.codigo =dvt.codigo_lancamento_viagem and
 dvt.codigo = dtp.codigo_trecho and
 dtp.codigo_pessoa = vcodigo_servidor and
 dlv.codigo_evento = vcodigo_evento;
+
 --htp.p('**tipo de viagem**=**' ||vtottipoviagem);
+
 if vtottipoviagem > 0 then
 --htp.p('loop k');
 --htp.p('**tipo de viagem**=**' ||vtottipoviagem);
@@ -547,7 +563,7 @@ for i in
                 
         if(meias_datas(to_number(vdata-vdata2)+1) = 1.0) then
              if(vdata = i.fim) then
-               mais := mais + 0.5;
+                mais := mais + 0.5;
                 valor_excecao1 := 0.5;
                 meias_datas(to_number(vdata-vdata2)+1) := meias_datas(to_number(vdata-vdata2)+1) - 0.5;
             else
@@ -657,7 +673,7 @@ vdiariastipo(a).vdiaexclui := total_excecao;
 
 end if;
 
- 
+
 while a is not null loop
 
     vprox:=  vdiariastipo.next(a);
@@ -667,9 +683,11 @@ while a is not null loop
         aux := vdiariastipo(vpadrao);
         vdiariastipo(vpadrao) := vdiariastipo(vprox);
         vdiariastipo(vprox) := aux;
+        
         end if;
         vdiariastipo(vpadrao).vdias := vdiariastipo(vpadrao).vdias - vdiariastipo(vprox).vdias - vdiariastipo(vprox).vdiaexclui;
    end if;
+      
     a := vdiariastipo.next(a);
 end loop;
 
@@ -678,7 +696,7 @@ vdiariastipo(vpadrao).vdias := vdiariastipo(vpadrao).vdias - vdiariastipo(vpadra
 else
 vdiariastipo(vpadrao).vdias := vdiariastipo(vpadrao).vdias;
 end if;
-
+  
 --htp.p('vou entrar no loop exececao');
 select count(codigo) into i from DIARIAS_EXCECAO where CODIGO_LANCAMENTO =vcodlanc;
 if i >0 then
@@ -713,6 +731,7 @@ while a is not null loop
     a := vdiariastipo.next(a);
 end loop;
 --***********************************--
+
 a := vdiariastipoesp.first;
 --htp.p('resultado final');
 IF A IS NOT NULL THEN
@@ -729,18 +748,23 @@ IF A IS NOT NULL THEN
     a := vdiariastipoesp.next(a);
   end loop;
 END IF;
+
 a := vdiariastipo.first;
 IF A IS NOT NULL THEN
   
         novalista :=novalista ||'/'||vtotalauxaliment||'/'||vtaxatotal;--|| '/' ||vdiariastipo(a).vtipo;
+
     a := vdiariastipo.next(a);
 END IF;
+
 --a := vdiariastipoesp.first;
 --IF A IS NOT NULL THEN
   
        -- novalista :=novalista || '/' ||vdiariastipoesp(a).vtipo;
-  -- a := vdiariastipoesp.next(a);
+
+   -- a := vdiariastipoesp.next(a);
 --END IF;
+
 return novalista;
 exception
          when others then
@@ -748,5 +772,3 @@ exception
 return SQLERRM ||'deu erro$$$$';
 
 end;
-
-
